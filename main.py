@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
-"""news-image-20261120: deliver the bundled front page as entry.png.
+"""Deliver the 20 November 2026 front page.
 
-The picture is the entry, so this program does one small job: copy the
-PNG stored next to it into the directory the grader provides. It runs
-with no network and no third-party packages. Copying the same stored
-bytes on every run keeps the output deterministic, so the grader's two
-runs agree.
+The entry is a picture, drawn beforehand and stored next to this file.
+Running the program writes that picture to the grader's output folder
+as entry.png. It needs no network and no packages beyond the standard
+library, and because it writes the same stored bytes every time, the
+grader's two runs produce identical files.
 """
 
+import hashlib
 import os
-import shutil
+import sys
 from pathlib import Path
 
-ENTRY_NAME = "entry.png"
+IMAGE = "entry.png"
 
 
-def output_dir() -> Path:
-    """Where the grader wants the image (or /output by default)."""
-    return Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
-
-
-def deliver() -> Path:
-    """Copy the bundled front page to the output directory."""
-    here = Path(__file__).resolve().parent
-    source = here / ENTRY_NAME
-    if not source.is_file():
-        raise SystemExit(f"bundled image not found: {source}")
-    target = output_dir() / ENTRY_NAME
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, target)
-    if target.stat().st_size != source.stat().st_size:
-        raise SystemExit(f"copy incomplete: {target}")
-    return target
+def main() -> int:
+    root = Path(__file__).resolve().parent
+    picture = root / IMAGE
+    if not picture.exists():
+        print(f"missing bundled image: {picture}", file=sys.stderr)
+        return 1
+    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    data = picture.read_bytes()
+    want = hashlib.sha256(data).hexdigest()
+    target = out_dir / IMAGE
+    target.write_bytes(data)
+    if hashlib.sha256(target.read_bytes()).hexdigest() != want:
+        print("written image does not match the bundled one", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    deliver()
+    raise SystemExit(main())
